@@ -9,8 +9,10 @@ Author: Hassan Darwish
 Date: October 2025
 """
 
+import numpy as np
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
+from numpy.typing import NDArray
 
 
 class Layer(ABC):
@@ -22,6 +24,8 @@ class Layer(ABC):
     Attributes:
         trainable (bool): True if the layer has parameters that can be
                           updated during training.
+        initialized (bool): True if the layer parameters are set in the
+                            forward function.
         params (Dict[str, Any]): A dictionary holding the layer's trainable
                                  parameters (e.g., 'weights', 'biases').
         grads (Dict[str, Any]): A dictionary holding the gradients computed
@@ -37,13 +41,14 @@ class Layer(ABC):
     def __init__(self) -> None:
         """Initializes the base layer attributes."""
         self.trainable: bool = False
-        self.params: Dict[str, Any] = {}
-        self.grads: Dict[str, Any] = {}
-        self.input: Optional[Any] = None
-        self.output: Optional[Any] = None
+        self.initialized: bool = False
+        self.params: Dict[str, NDArray[np.float32]] = {}
+        self.grads: Dict[str, NDArray[np.float32]] = {}
+        self.input: Optional[NDArray[np.float32]] = None
+        self.output: Optional[NDArray[np.float32]] = None
 
     @abstractmethod
-    def forward(self, inputs: Any) -> Any:
+    def forward(self, inputs: NDArray[np.float32]) -> Optional[NDArray[np.float32]]:
         """Performs the forward pass of the layer.
 
         Args:
@@ -55,7 +60,7 @@ class Layer(ABC):
         pass
 
     @abstractmethod
-    def backward(self, grad_output: Any) -> Any:
+    def backward(self, grad_output: NDArray[np.float32]) -> NDArray[np.float32]:
         """Performs the backward pass of the layer.
 
         Computes the gradient of the loss with respect to the layer's
