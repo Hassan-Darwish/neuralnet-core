@@ -3,11 +3,15 @@
 This module provides the `Dense` class, which is a concrete implementation
 of the abstract `Layer` class. It performs a linear operation
 (matrix multiplication and optional bias addition).
+
+Author: Hassan Darwish
+Date: October 2025
 """
 
-from layers import Layer
+from src.models.layers import Layer
 from numpy.typing import NDArray
-from typing import Optional 
+from typing import Optional
+from src.models.activations import get_activation
 import numpy as np
 
 class Dense(Layer):
@@ -64,10 +68,9 @@ class Dense(Layer):
         super().__init__()
         self.trainable = True
         self.units = units
-        self.activation = activation
+        self.activation = get_activation(activation)
         self.use_bias = use_bias
         self.kernel_initializer = kernel_initializer
-        # Flag to track lazy initialization
         self.initialized: bool = False
 
     def forward(self, inputs: NDArray[np.float32]) -> Optional[NDArray[np.float32]]:
@@ -104,16 +107,18 @@ class Dense(Layer):
         # Store input for the backward pass
         self.input = inputs
         
-        # --- Perform the forward calculation ---
-        # output = dot(input, weights)
-        self.output = np.dot(self.input, self.params['W'])
-        
         # Add bias if configured
         if self.use_bias:
-            self.output = np.dot(self.input, self.params['W']) + self.params['b']
+            z: NDArray[np.float32] = np.dot(self.input, self.params['W']) + self.params['b']
         else:
-            self.output = np.dot(self.input, self.params['W'])
-        
+            z: NDArray[np.float32] = np.dot(self.input, self.params['W'])
+
+        # add activation if configured
+        if self.activation is not None:
+            self.output = self.activation.forward(z)
+        else:
+            self.output = z
+
         return self.output
     
     def backward(self, grad_output: NDArray[np.float32]) -> NDArray[np.float32]:
@@ -132,8 +137,12 @@ class Dense(Layer):
                                  this layer's input.
         """
         if self.input is None:
-            raise ValueError("Dense layer received backward() call before forward() — check training flow.")
-        
+            raise ValueError("Dense layer received backward() before forward().")
+
+        # add activation if configured
+        if self.activation is not None:
+            grad_output = self.activation.backward(grad_output)
+
         # Gradient of loss w.r.t. weights (dW)
         # dL/dW = dL/dOut * dOut/dW = X.T @ grad_output
         self.grads['W'] = np.dot(self.input.T, grad_output)
